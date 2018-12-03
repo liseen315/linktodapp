@@ -15,6 +15,7 @@ flask-moment = "*"
 python-dotenv = "*"
 flask-migrate = "*"
 flask-whooshee = "*"
+pymysql = "*"
 
 [requires]
 python_version = "3.7"
