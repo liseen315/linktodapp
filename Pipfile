@@ -16,6 +16,7 @@ python-dotenv = "*"
 flask-migrate = "*"
 flask-whooshee = "*"
 pymysql = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"
