@@ -8,7 +8,8 @@ from linktodapp.models import Dapps,Tags,Platform,Category,Status
 from linktodapp.extensions import db,migrate,toolbar,whooshee
 from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
-
+from multiprocessing.pool import Pool
+from functools import partial
 
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -45,6 +46,34 @@ def register_extensions(app):
 def register_blueprints(app):
     pass
 
+
+def getdappsdata(platform,pagenum):
+    rankData = getDataFromRank(pagenum, platform)
+    for i,itemdata in enumerate(rankData.get('items')):
+        dappname = itemdata.get('name').replace(' ','-').rstrip('-').lower()
+        dappData = getDappDetail(dappname).get('item')
+        print('-getdappsdata--',pagenum,dappname)
+        socials = dappData.get('socials')
+        for socialsItem in enumerate(socials):
+            print(socialsItem)
+        dapp = Dapps(
+            name = dappData.get('name'),
+            email = '',
+            des = '',
+            full_des= dappData.get('description'),
+            web_url=dappData.get('sites').get('websiteUrl'),
+            app_url=dappData.get('sites').get('app_url'),
+            authors=','.join(dappData.get('authors')),
+            license=dappData.get('license'),
+            logo_url=dappData.get('logoUrl'),
+            icon_url=dappData.get('iconUrl'),
+            pro_url='',
+            main_net = ','.join(dappData.get('contractsMainnet'))
+        )
+        db.session.add(dapp)
+        db.session.commit()
+
+
 # 注册命令
 def register_commands(app):
     # 初始化表
@@ -61,27 +90,13 @@ def register_commands(app):
     # 抓数据-这里应该启动线程去抓会快一些...
     @app.cli.command()
     @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
-    def getdata(platform):
-        rankData = getDataFromRank(1,platform)
-        for i,itemdata in enumerate(rankData.get('items')):
-            dappname = itemdata.get('name').replace(' ','-').rstrip('-').lower()
-            dappData = getDappDetail(dappname)
-            dapp = Dapps(
-                name = dappData.get('item').get('name'),
-                email = '',
-                des = '',
-                full_des= dappData.get('item').get('description'),
-                web_url=dappData.get('item').get('sites').get('websiteUrl'),
-                app_url=dappData.get('item').get('sites').get('app_url'),
-                authors=','.join(dappData.get('item').get('authors')),
-                license=dappData.get('item').get('license'),
-                logo_url=dappData.get('item').get('logoUrl'),
-                icon_url=dappData.get('item').get('iconUrl'),
-                pro_url='',
-                main_net = ','.join(dappData.get('item').get('contractsMainnet'))
-            )
-            db.session.add(dapp)
-            db.session.commit()
+    @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
+    def getdapps(platform,pagenum):
+        pool = Pool()
+        groups = ([x for x in range(1,int(pagenum)+1)])
+        pool.map(partial(getdappsdata,platform),groups)
+        pool.close()
+        pool.join()
         click.echo('Initialized table dapps')
 
     # 需要先执行下这个命令
