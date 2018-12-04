@@ -1,20 +1,22 @@
 from datetime import datetime
-
+from sqlalchemy.sql.sqltypes import TIMESTAMP
 from linktodapp.extensions import db
+
 
 # dapp 表
 class Dapps(db.Model):
     __tablename__ = 'dapps'
     id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(25))
+    slug = db.Column(db.String(25))
     email = db.Column(db.String(50))
     tagline = db.Column(db.String(50))
     full_des = db.Column(db.Text(1000))
     web_url = db.Column(db.Text(500))
     app_url = db.Column(db.Text(255))
     authors = db.Column(db.String(255))
-    created = db.Column(db.DateTime,default=datetime.utcnow,index=True)
-    lastUpdated = db.Column(db.DateTime,default=datetime.utcnow,index=True)
+    created = db.Column(db.DateTime, default=datetime.utcnow,index=True)
+    lastUpdated = db.Column(db.DateTime, default=datetime.utcnow,index=True)
     license = db.Column(db.String(50))
     logo_url = db.Column(db.String(255))
     icon_url = db.Column(db.String(255))

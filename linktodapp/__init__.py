@@ -50,9 +50,9 @@ def register_blueprints(app):
 def getdappsdata(platform,pagenum):
     rankData = getDataFromRank(pagenum, platform)
     for i,itemdata in enumerate(rankData.get('items')):
-        dappname = itemdata.get('name').replace(' ','-').rstrip('-').lower()
-        dappData = getDappDetail(dappname).get('item')
-        print('-getdappsdata--',pagenum,dappname)
+        slug = itemdata.get('slug')
+        dappData = getDappDetail(slug).get('item')
+        print('-getdappsdata--',pagenum,slug)
         socials = dappData.get('socials')
         for j,socialsItem in enumerate(socials):
             if socialsItem.get('platform') == 'facebook':
@@ -67,6 +67,7 @@ def getdappsdata(platform,pagenum):
                 githuburl =  socialsItem.get('url')
         dapp = Dapps(
             name = dappData.get('name'),
+            slug= dappData.get('slug'),
             email = '',
             tagline = '',
             full_des= dappData.get('description').lstrip(),
@@ -158,6 +159,7 @@ def register_commands(app):
     @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
     @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
     def getdapps(platform,pagenum):
+        # getdappsdata(platform,pagenum)
         pool = Pool()
         groups = ([x for x in range(1,int(pagenum)+1)])
         pool.map(partial(getdappsdata,platform),groups)
