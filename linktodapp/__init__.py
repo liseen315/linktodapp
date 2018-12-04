@@ -54,13 +54,22 @@ def getdappsdata(platform,pagenum):
         dappData = getDappDetail(dappname).get('item')
         print('-getdappsdata--',pagenum,dappname)
         socials = dappData.get('socials')
-        for socialsItem in enumerate(socials):
-            print(socialsItem)
+        for j,socialsItem in enumerate(socials):
+            if socialsItem.get('platform') == 'facebook':
+                fburl = socialsItem.get('url')
+            elif socialsItem.get('platform') == 'twitter':
+                twburl = socialsItem.get('url')
+            elif socialsItem.get('platform') == 'blog':
+                blogburl = socialsItem.get('url')
+            elif socialsItem.get('platform') == 'reddit':
+                redditburl = socialsItem.get('url')
+            elif  socialsItem.get('platform') == 'github':
+                githuburl =  socialsItem.get('url')
         dapp = Dapps(
             name = dappData.get('name'),
             email = '',
-            des = '',
-            full_des= dappData.get('description'),
+            tagline = '',
+            full_des= dappData.get('description').lstrip(),
             web_url=dappData.get('sites').get('websiteUrl'),
             app_url=dappData.get('sites').get('app_url'),
             authors=','.join(dappData.get('authors')),
@@ -68,7 +77,15 @@ def getdappsdata(platform,pagenum):
             logo_url=dappData.get('logoUrl'),
             icon_url=dappData.get('iconUrl'),
             pro_url='',
-            main_net = ','.join(dappData.get('contractsMainnet'))
+            main_net = ','.join(dappData.get('contractsMainnet')),
+            facebook_url=fburl,
+            twitter_url=twburl,
+            github_url=githuburl,
+            reddit_url=redditburl,
+            blog_url=blogburl,
+            categeory_id=Category.query.filter_by(name=dappData.get('categories')[0]).first().id,
+            status_id=Status.query.filter_by(type=dappData.get('status')).first().id,
+            platform_id=Platform.query.filter_by(name=dappData.get('platform').lower()).first().id
         )
         db.session.add(dapp)
         db.session.commit()
@@ -76,31 +93,7 @@ def getdappsdata(platform,pagenum):
 
 # 注册命令
 def register_commands(app):
-    # 初始化表
-    @app.cli.command()
-    @click.option('--drop', is_flag=True, help='Create after drop.')
-    def initdb(drop):
-        if drop:
-            click.confirm('This operation will delete the database, do you want to continue?', abort=True)
-            db.drop_all()
-            click.echo('Drop tables')
-        db.create_all()
-        click.echo('Initialized database.')
 
-    # 抓数据-这里应该启动线程去抓会快一些...
-    @app.cli.command()
-    @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
-    @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
-    def getdapps(platform,pagenum):
-        pool = Pool()
-        groups = ([x for x in range(1,int(pagenum)+1)])
-        pool.map(partial(getdappsdata,platform),groups)
-        pool.close()
-        pool.join()
-        click.echo('Initialized table dapps')
-
-    # 需要先执行下这个命令
-    @app.cli.command()
     def forge():
 
         def forgeCategory():
@@ -147,6 +140,32 @@ def register_commands(app):
         forgePlatform()
         forgeTags()
         forgeStatus()
+
+    # 初始化表
+    @app.cli.command()
+    @click.option('--drop', is_flag=True, help='Create after drop.')
+    def initdb(drop):
+        if drop:
+            click.confirm('This operation will delete the database, do you want to continue?', abort=True)
+            db.drop_all()
+            click.echo('Drop tables')
+        db.create_all()
+        forge()
+        click.echo('Initialized database.')
+
+    # 抓数据-这里应该启动线程去抓会快一些...
+    @app.cli.command()
+    @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
+    @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
+    def getdapps(platform,pagenum):
+        pool = Pool()
+        groups = ([x for x in range(1,int(pagenum)+1)])
+        pool.map(partial(getdappsdata,platform),groups)
+        pool.close()
+        pool.join()
+        click.echo('Initialized table dapps')
+
+
 
 
 
