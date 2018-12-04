@@ -32,3 +32,21 @@ def getDappDetail(dappName):
             return response.json()
     except requests.ConnectionError:
         return None
+
+def getCategories():
+    url = 'https://api.stateofthedapps.com/categories'
+    try:
+        response = requests.get(url,headers=headers)
+        if response.status_code == 200:
+            return response.json()
+    except requests.ConnectionError:
+        return None
+
+def getTags():
+    url = 'https://api.stateofthedapps.com/tags?type=dapps'
+    try:
+        response = requests.get(url,headers=headers)
+        if response.status_code == 200:
+            return response.json()
+    except requests.ConnectionError:
+        return None

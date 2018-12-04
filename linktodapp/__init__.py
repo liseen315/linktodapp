@@ -6,7 +6,7 @@ import click
 from flask import Flask
 from linktodapp.models import Dapps,Tags,Platform,Category,Status
 from linktodapp.extensions import db,migrate,toolbar,whooshee
-from linktodapp.reptile import getDataFromRank,getDappDetail
+from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
 
 
@@ -62,12 +62,10 @@ def register_commands(app):
     @app.cli.command()
     @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
     def getdata(platform):
-        click.echo('get data from statusofdapps ')
         rankData = getDataFromRank(1,platform)
         for i,itemdata in enumerate(rankData.get('items')):
             dappname = itemdata.get('name').replace(' ','-').rstrip('-').lower()
             dappData = getDappDetail(dappname)
-            # print(dappData.get('item').get('name'))
             dapp = Dapps(
                 name = dappData.get('item').get('name'),
                 email = '',
@@ -82,7 +80,60 @@ def register_commands(app):
                 pro_url='',
                 main_net = ','.join(dappData.get('item').get('contractsMainnet'))
             )
-            print('--add---',dappData.get('item').get('name'))
             db.session.add(dapp)
             db.session.commit()
-        print('add over--')
+        click.echo('Initialized table dapps')
+
+    # 需要先执行下这个命令
+    @app.cli.command()
+    def forge():
+
+        def forgeCategory():
+            categoryItems = getCategories().get('items')
+            for i,item in enumerate(categoryItems):
+                cModel = Category(
+                    name= item.get('slug')
+                )
+                db.session.add(cModel)
+                db.session.commit()
+            click.echo('Initialized table category')
+
+        def forgePlatform():
+            platformList = ['ethereum','eos']
+            for i,pitem in enumerate(platformList):
+                pModel = Platform(
+                    name=pitem
+                )
+                db.session.add(pModel)
+                db.session.commit()
+            click.echo('Initialized table platform')
+
+        def forgeTags():
+            tagItems = getTags().get('items')
+            for i,item in enumerate(tagItems):
+                tModel = Tags(
+                    name=item
+                )
+                db.session.add(tModel)
+                db.session.commit()
+            click.echo('Initialized table tags')
+
+        def forgeStatus():
+            statusList = ['live','beta','prototype','Work in progress','concept','broken','stealth','abandoned']
+            for i,item in enumerate(statusList):
+                sModel = Status(
+                    type= item
+                )
+                db.session.add(sModel)
+                db.session.commit()
+            click.echo('Initialized table status')
+
+        forgeCategory()
+        forgePlatform()
+        forgeTags()
+        forgeStatus()
+
+
+
+
+
