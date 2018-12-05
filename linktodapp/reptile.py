@@ -8,7 +8,7 @@ headers = {
 
 def getDataFromRank(currentPage,platform):
     params = {
-        'platform': 'ethereum',
+        'platform': platform,
         'sort': 'rank',
         'order': 'asc',
         'page': currentPage

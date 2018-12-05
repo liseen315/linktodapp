@@ -2,6 +2,12 @@ from datetime import datetime
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from linktodapp.extensions import db
 
+
+tagging = db.Table('tagging',
+                   db.Column('dapp_id', db.Integer, db.ForeignKey('dapps.id')),
+                   db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'))
+                   )
+
 # dapp 表
 class Dapps(db.Model):
     __tablename__ = 'dapps'
@@ -30,18 +36,21 @@ class Dapps(db.Model):
     status_id = db.Column(db.Integer)
     platform_id = db.Column(db.Integer)
     categeory_id = db.Column(db.Integer)
+    tags = db.relationship('Tag', secondary=tagging, back_populates='dapps')
 
 
 # tag 表
-class Tags(db.Model):
-    __tablename__ = 'tags'
+class Tag(db.Model):
+    __tablename__ = 'tag'
     id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(50),nullable=False,unique=True)
+    dapps = db.relationship('Dapps', secondary=tagging, back_populates='tags')
 
-class Tagging(db.Model):
-    __tablename__='tagging'
-    dapp_id = db.Column(db.Integer,primary_key=True)
-    tag_id = db.Column(db.Integer,primary_key=True)
+
+# class Tagging(db.Model):
+#     __tablename__='tagging'
+#     dapp_id = db.Column(db.Integer,primary_key=True)
+#     tag_id = db.Column(db.Integer,primary_key=True)
 
 # 平台表
 class Platform(db.Model):

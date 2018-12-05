@@ -5,7 +5,7 @@ from flask import Flask
 from multiprocessing.pool import Pool
 from functools import partial
 from logging.handlers import RotatingFileHandler
-from linktodapp.models import Dapps,Tags,Platform,Category,Status,Tagging
+from linktodapp.models import Dapps,Tag,Platform,Category,Status
 from linktodapp.extensions import db,migrate,toolbar,whooshee
 from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
@@ -80,16 +80,6 @@ def initdapps(platform,pagenum):
                 redditburl = socialsItem.get('url')
             elif  socialsItem.get('platform') == 'github':
                 githuburl =  socialsItem.get('url')
-        # 查找dapp的tag是否在表内,不在就添加进去
-        tags = dappData.get('tags')
-        for tagName in tags:
-            tag = Tags.query.filter_by(name=tagName.lower()).first()
-            if tag is None:
-                tag = Tags(
-                    name=tagName
-                )
-                db.session.add(tag)
-                db.session.commit()
 
         # 做一堆保护
         categorieId = None
@@ -140,18 +130,20 @@ def initdapps(platform,pagenum):
         db.session.add(dapp)
         db.session.commit()
 
-        # # 给tagging内插入数据
-        # tags = dappData.get('tags')
-        # dappid = dappid + 1
-        # for tagName in tags:
-        #     tag = Tags.query.filter_by(name=tagName).first()
-        #     print('dappid',dappid)
-        #     tagging = Tagging(
-        #         dapp_id= dappid,
-        #         tag_id=tag.id
-        #     )
-        #     db.session.add(tagging)
-        #     db.session.commit()
+        # 查找dapp的tag是否在表内,不在就添加进去
+        targetDapp =  Dapps.query.get_or_404(dapp.id)
+        tags = dappData.get('tags')
+        for tagName in tags:
+            tag = Tag.query.filter_by(name=tagName.lower()).first()
+            if tag is None:
+                tag = Tag(
+                    name=tagName
+                )
+                db.session.add(tag)
+                db.session.commit()
+            if tag not in targetDapp.tags:
+                targetDapp.tags.append(tag)
+                db.session.commit()
 
 
 
@@ -192,7 +184,7 @@ def register_commands(app):
         def forgeTags():
             tagItems = getTags().get('items')
             for i,item in enumerate(tagItems):
-                tModel = Tags(
+                tModel = Tag(
                     name=item
                 )
                 db.session.add(tModel)
@@ -228,7 +220,7 @@ def register_commands(app):
 
     # 抓数据-这里应该启动线程去抓会快一些...
     @app.cli.command()
-    @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
+    @click.option('--platform', default='eos',help='get data from statusofdapp api')
     @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
     def getdapps(platform,pagenum):
         # initdapps(platform,pagenum)
