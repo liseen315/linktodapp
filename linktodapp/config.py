@@ -15,7 +15,7 @@ class DevelopmentConfig(BaseConfig):
     PORT = '3306'
     DATABASE = 'linktodapp'
 
-    dev_uri = "{}+{}://{}:{}@{}:{}/{}?charset=utf8".format(DIALECT, DRIVER, USERNAME, PASSWORD, HOST, PORT, DATABASE)
+    dev_uri = "{}+{}://{}:{}@{}:{}/{}?charset=utf8mb4".format(DIALECT, DRIVER, USERNAME, PASSWORD, HOST, PORT, DATABASE)
     SQLALCHEMY_DATABASE_URI = dev_uri
 
 class ProductionConfig(BaseConfig):

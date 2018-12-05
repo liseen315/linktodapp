@@ -5,7 +5,7 @@
 
 *mysql*
 ```mysql
-create database linktodapp character set utf8;
+create database linktodapp character set utf8mb4;
 ```
 *python*
 ```

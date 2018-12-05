@@ -5,7 +5,7 @@ from flask import Flask
 from multiprocessing.pool import Pool
 from functools import partial
 from logging.handlers import RotatingFileHandler
-from linktodapp.models import Dapps,Tags,Platform,Category,Status
+from linktodapp.models import Dapps,Tags,Platform,Category,Status,Tagging
 from linktodapp.extensions import db,migrate,toolbar,whooshee
 from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
@@ -55,13 +55,20 @@ def register_blueprints(app):
     pass
 
 # 初始化dapps
-def getdappsdata(platform,pagenum):
+def initdapps(platform,pagenum):
     rankData = getDataFromRank(pagenum, platform)
+    dappid = 0
+
     for i,itemdata in enumerate(rankData.get('items')):
         slug = itemdata.get('slug')
         dappData = getDappDetail(slug).get('item')
-        print('-getdappsdata--',pagenum,slug)
+        print('-initdapps--',pagenum,slug)
         socials = dappData.get('socials')
+        fburl = None
+        twburl = None
+        blogburl = None
+        redditburl = None
+        githuburl = None
         for j,socialsItem in enumerate(socials):
             if socialsItem.get('platform') == 'facebook':
                 fburl = socialsItem.get('url')
@@ -73,32 +80,82 @@ def getdappsdata(platform,pagenum):
                 redditburl = socialsItem.get('url')
             elif  socialsItem.get('platform') == 'github':
                 githuburl =  socialsItem.get('url')
+        # 查找dapp的tag是否在表内,不在就添加进去
+        tags = dappData.get('tags')
+        for tagName in tags:
+            tag = Tags.query.filter_by(name=tagName.lower()).first()
+            if tag is None:
+                tag = Tags(
+                    name=tagName
+                )
+                db.session.add(tag)
+                db.session.commit()
+
+        # 做一堆保护
+        categorieId = None
+        if len(dappData.get('categories')) > 0 :
+            categories = Category.query.filter_by(name=dappData.get('categories')[0]).first()
+            categorieId = categories.id
+            if categories is None:
+                categorie = Category(
+                    name=dappData.get('categories')[0]
+                )
+                db.session.add(categorie)
+                db.session.commit()
+
+        status = Status.query.filter_by(type=dappData.get('status')).first()
+        if status is None:
+            statusModel = Status(
+                type=dappData.get('status')
+            )
+            db.session.add(statusModel)
+            db.session.commit()
+
+        authors = None
+        if dappData.get('authors') is not None:
+            authors = ','.join(dappData.get('authors'))
+
         dapp = Dapps(
             name = dappData.get('name'),
             slug= dappData.get('slug'),
-            email = '',
-            tagline = '',
             full_des= dappData.get('description').lstrip(),
             web_url=dappData.get('sites').get('websiteUrl'),
             app_url=dappData.get('sites').get('app_url'),
-            authors=','.join(dappData.get('authors')),
+            authors=authors,
             license=dappData.get('license'),
             logo_url=dappData.get('logoUrl'),
             icon_url=dappData.get('iconUrl'),
-            pro_url='',
             main_net = ','.join(dappData.get('contractsMainnet')),
+            created=dappData.get('created'),
+            lastUpdated=dappData.get('lastUpdated'),
             facebook_url=fburl,
             twitter_url=twburl,
             github_url=githuburl,
             reddit_url=redditburl,
             blog_url=blogburl,
-            categeory_id=Category.query.filter_by(name=dappData.get('categories')[0]).first().id,
+            categeory_id=categorieId,
             status_id=Status.query.filter_by(type=dappData.get('status')).first().id,
             platform_id=Platform.query.filter_by(name=dappData.get('platform').lower()).first().id
         )
         db.session.add(dapp)
         db.session.commit()
 
+        # # 给tagging内插入数据
+        # tags = dappData.get('tags')
+        # dappid = dappid + 1
+        # for tagName in tags:
+        #     tag = Tags.query.filter_by(name=tagName).first()
+        #     print('dappid',dappid)
+        #     tagging = Tagging(
+        #         dapp_id= dappid,
+        #         tag_id=tag.id
+        #     )
+        #     db.session.add(tagging)
+        #     db.session.commit()
+
+
+
+# 上传图片到cloudinary
 def uploadToCloud(imgList,index):
     if len(imgList[index]['logoPath']) > 0:
         cloudinary.uploader.upload(imgList[index]['logoPath'],public_id='linktodapp'+imgList[index]['logoName'])
@@ -131,6 +188,7 @@ def register_commands(app):
                 db.session.commit()
             click.echo('Initialized table platform')
 
+        # 初始化默认的tag
         def forgeTags():
             tagItems = getTags().get('items')
             for i,item in enumerate(tagItems):
@@ -173,10 +231,10 @@ def register_commands(app):
     @click.option('--platform', default='ethereum',help='get data from statusofdapp api')
     @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
     def getdapps(platform,pagenum):
-        # getdappsdata(platform,pagenum)
+        # initdapps(platform,pagenum)
         pool = Pool()
         groups = ([x for x in range(1,int(pagenum)+1)])
-        pool.map(partial(getdappsdata,platform),groups)
+        pool.map(partial(initdapps,platform),groups)
         pool.close()
         pool.join()
         click.echo('Initialized table dapps')
@@ -203,6 +261,10 @@ def register_commands(app):
 
         uploadimg(imgList)
         click.echo('uploadimg over')
+
+    @app.cli.command()
+    def createtagging():
+        pass
 
 
 
