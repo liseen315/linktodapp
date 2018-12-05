@@ -17,6 +17,7 @@ flask-migrate = "*"
 flask-whooshee = "*"
 pymysql = "*"
 requests = "*"
+cloudinary = "*"
 
 [requires]
 python_version = "3.7"

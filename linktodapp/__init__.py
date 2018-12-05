@@ -1,17 +1,25 @@
 import logging
 import os
-from logging.handlers import RotatingFileHandler
-
 import click
 from flask import Flask
+from multiprocessing.pool import Pool
+from functools import partial
+from logging.handlers import RotatingFileHandler
 from linktodapp.models import Dapps,Tags,Platform,Category,Status
 from linktodapp.extensions import db,migrate,toolbar,whooshee
 from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
-from multiprocessing.pool import Pool
-from functools import partial
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+
+cloudinary.config(
+    cloud_name = os.getenv('CLOUD_NAME'),
+    api_key = os.getenv('API_KEY'),
+    api_secret = os.getenv('API_SECRET')
+)
 
 def create_app(config_name=None):
     if config_name is None:
@@ -46,7 +54,7 @@ def register_extensions(app):
 def register_blueprints(app):
     pass
 
-
+# 初始化dapps
 def getdappsdata(platform,pagenum):
     rankData = getDataFromRank(pagenum, platform)
     for i,itemdata in enumerate(rankData.get('items')):
@@ -90,6 +98,12 @@ def getdappsdata(platform,pagenum):
         )
         db.session.add(dapp)
         db.session.commit()
+
+def uploadToCloud(imgList,index):
+    if len(imgList[index]['logoPath']) > 0:
+        cloudinary.uploader.upload(imgList[index]['logoPath'],public_id='linktodapp'+imgList[index]['logoName'])
+    if len(imgList[index]['iconPath']) > 0:
+        cloudinary.uploader.upload(imgList[index]['iconPath'], public_id='linktodapp' + imgList[index]['iconName'])
 
 
 # 注册命令
@@ -166,6 +180,30 @@ def register_commands(app):
         pool.close()
         pool.join()
         click.echo('Initialized table dapps')
+
+    @app.cli.command()
+    def dimgfromstatus():
+
+        def uploadimg(imgList):
+            pool = Pool()
+            groups = ([x for x in range(0, len(imgList))])
+            pool.map(partial(uploadToCloud,imgList),groups)
+            pool.close()
+            pool.join()
+
+        imgList = []
+        for i, imgpath in enumerate(Dapps.query.with_entities(Dapps.logo_url, Dapps.icon_url).all()):
+            imgitem = {
+                'logoPath': imgpath.logo_url,
+                'iconPath': imgpath.icon_url,
+                'logoName': imgpath.logo_url.replace('https://cdn.stateofthedapps.com',''),
+                'iconName': imgpath.icon_url.replace('https://cdn.stateofthedapps.com','')
+            }
+            imgList.append(imgitem)
+
+        uploadimg(imgList)
+        click.echo('uploadimg over')
+
 
 
 

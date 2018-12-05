@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "22b89785da64f1407e10041296f647e2174dcaccf9c2fdaaf1d864d4af985e7c"
+            "sha256": "4abfe48ce2d0d7d8aded071ab090aa0669fb482b17c5ab85cc15f396a4eff89f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -92,6 +92,13 @@
                 "sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"
             ],
             "version": "==7.0"
+        },
+        "cloudinary": {
+            "hashes": [
+                "sha256:6db07ce3e14d3edc96313aa42d7f472eac637e0f583f122738ffe1327f1cc031"
+            ],
+            "index": "pypi",
+            "version": "==1.14.0"
         },
         "cryptography": {
             "hashes": [
@@ -223,6 +230,20 @@
                 "sha256:fb7c206e01ad85ce57feeaaa0bf784b97fa3cad0d4a5737bc5295785f5c613a1"
             ],
             "version": "==1.1.0"
+        },
+        "mock": {
+            "hashes": [
+                "sha256:5ce3c71c5545b472da17b72268978914d0252980348636840bd34a00b5cc96c1",
+                "sha256:b158b6df76edd239b8208d481dc46b6afd45a846b7812ff0ce58971cf5bc8bba"
+            ],
+            "version": "==2.0.0"
+        },
+        "pbr": {
+            "hashes": [
+                "sha256:f59d71442f9ece3dffc17bc36575768e1ee9967756e6b6535f0ee1f0054c3d68",
+                "sha256:f6d5b23f226a2ba58e14e49aa3b1bfaf814d0199144b95d78458212444de1387"
+            ],
+            "version": "==5.1.1"
         },
         "pycparser": {
             "hashes": [
