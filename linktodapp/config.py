@@ -5,6 +5,7 @@ class BaseConfig(object):
     SECRET_KEY = os.getenv('SECRET_KEY', 'you-will-never-guess')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_RECORD_QUERIES = True
+    SERVER_NAME = 'linktodapp.com:5000'  # enable subdomain support
 
 class DevelopmentConfig(BaseConfig):
     DIALECT = 'mysql'

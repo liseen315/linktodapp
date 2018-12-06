@@ -1,25 +1,17 @@
 import logging
 import os
 import click
-from flask import Flask
+from flask import Flask,jsonify,request
 from multiprocessing.pool import Pool
 from functools import partial
 from logging.handlers import RotatingFileHandler
+from linktodapp.apis.v1 import api_v1
 from linktodapp.models import Dapps,Tag,Platform,Category,Status
-from linktodapp.extensions import db,migrate,toolbar,whooshee
+from linktodapp.extensions import db,migrate,toolbar,whooshee,csrf,babel
 from linktodapp.reptile import getDataFromRank,getDappDetail,getCategories,getTags
 from linktodapp.config import config
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-
-cloudinary.config(
-    cloud_name = os.getenv('CLOUD_NAME'),
-    api_key = os.getenv('API_KEY'),
-    api_secret = os.getenv('API_SECRET')
-)
 
 def create_app(config_name=None):
     if config_name is None:
@@ -32,6 +24,7 @@ def create_app(config_name=None):
     register_extensions(app)
     register_blueprints(app)
     register_commands(app)
+    register_errors(app)
     return app
 
 # 注册log
@@ -49,15 +42,18 @@ def register_extensions(app):
     toolbar.init_app(app)
     migrate.init_app(app)
     whooshee.init_app(app)
+    csrf.init_app(app)
+    csrf.exempt(api_v1)
+    babel.init_app(app)
 
 # 注册蓝本
 def register_blueprints(app):
-    pass
+    # app.register_blueprint(api_v1, url_prefix='/api/v1')
+    app.register_blueprint(api_v1, url_prefix='/v1', subdomain='api')  # enable subdomain support
 
 # 初始化dapps
 def initdapps(platform,pagenum):
     rankData = getDataFromRank(pagenum, platform)
-    dappid = 0
 
     for i,itemdata in enumerate(rankData.get('items')):
         slug = itemdata.get('slug')
@@ -147,17 +143,6 @@ def initdapps(platform,pagenum):
                 targetDapp.tags.append(tag)
                 db.session.commit()
 
-
-
-# 上传图片到cloudinary
-def uploadToCloud(imgList,index):
-    print('uploadToCloud',imgList[index]['logoPath'])
-    # if len(imgList[index]['logoPath']) > 0:
-    #     cloudinary.uploader.upload(imgList[index]['logoPath'],public_id='linktodapp'+imgList[index]['logoName'])
-    # if len(imgList[index]['iconPath']) > 0:
-    #     cloudinary.uploader.upload(imgList[index]['iconPath'], public_id='linktodapp' + imgList[index]['iconName'])
-
-
 # 注册命令
 def register_commands(app):
 
@@ -221,50 +206,50 @@ def register_commands(app):
         forge()
         click.echo('Initialized database.')
 
-    # 抓数据-这里应该启动线程去抓会快一些...
+    # 抓数据
     @app.cli.command()
-    @click.option('--platform', default='eos',help='get data from statusofdapp api')
+    @click.option('--platform', default='ethereum',prompt='enter platform',help='get data from statusofdapp api default ethereum')
     @click.option('--pagenum',prompt='enter pagenum',help='target pagenum')
-    def getdapps(platform,pagenum):
-        # initdapps(platform,pagenum)
-        pool = Pool()
-        groups = ([x for x in range(1,int(pagenum)+1)])
-        pool.map(partial(initdapps,platform),groups)
-        pool.close()
-        pool.join()
-        click.echo('Initialized table dapps')
-
-    @app.cli.command()
-    def upimgfromstatus():
-
-        def uploadimg(imgList):
+    @click.option('--usepool',is_flag=True,prompt='user pool',help='user pool')
+    def getdapps(platform,pagenum,usepool):
+        if usepool:
             pool = Pool()
-            groups = ([x for x in range(0, len(imgList))])
-            pool.map(partial(uploadToCloud,imgList),groups)
+            groups = ([x for x in range(1,int(pagenum)+1)])
+            pool.map(partial(initdapps,platform),groups)
             pool.close()
             pool.join()
+        else:
+            initdapps(platform,pagenum)
 
-        imgList = []
-        for i, imgpath in enumerate(Dapps.query.with_entities(Dapps.logo_url, Dapps.icon_url).all()):
-            imgitem = {
-                'logoPath': imgpath.logo_url,
-                'iconPath': imgpath.icon_url,
-                'logoName': imgpath.logo_url.replace('https://cdn.stateofthedapps.com',''),
-                'iconName': imgpath.icon_url.replace('https://cdn.stateofthedapps.com','')
-            }
-            imgList.append(imgitem)
+        click.echo('Initialized table dapps')
 
-        uploadimg(imgList)
-        click.echo('uploadimg over')
 
-    @app.cli.command()
-    def updatecdnpath():
-        # 暂时不知道用什么方法能正确的不用两层循环update
-        for idlist in Dapps.query.with_entities(Dapps.id).all():
-            for targetDapp in Dapps.query.filter(Dapps.id == idlist.id).all():
-                targetDapp.icon_url = targetDapp.icon_url.replace('https://res.cloudinary.com/','https://cdn.stateofthedapps.com/')
-                targetDapp.logo_url = targetDapp.logo_url.replace('https://res.cloudinary.com/','https://cdn.stateofthedapps.com/')
-                db.session.commit()
+# 注册错误
+def register_errors(app):
+    @app.errorhandler(404)
+    def page_not_found(e):
+        if request.accept_mimetypes.accept_json and \
+                not request.accept_mimetypes.accept_html \
+                or request.path.startswith('/api'):
+            response = jsonify(code=404, message='The requested URL was not found on the server.')
+            response.status_code = 404
+            return response
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        response = jsonify(code=405, message='The method is not allowed for the requested URL.')
+        response.status_code = 405
+        return response
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        if request.accept_mimetypes.accept_json and \
+                not request.accept_mimetypes.accept_html \
+                or request.host.startswith('api'):
+            response = jsonify(code=500, message='An internal server error occurred.')
+            response.status_code = 500
+            return response
+
 
 
 
