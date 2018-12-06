@@ -61,6 +61,8 @@ def initdapps(platform,pagenum):
 
     for i,itemdata in enumerate(rankData.get('items')):
         slug = itemdata.get('slug')
+        if getDappDetail(slug) is None:
+            continue
         dappData = getDappDetail(slug).get('item')
         print('-initdapps--',pagenum,slug)
         socials = dappData.get('socials')
@@ -149,10 +151,11 @@ def initdapps(platform,pagenum):
 
 # 上传图片到cloudinary
 def uploadToCloud(imgList,index):
-    if len(imgList[index]['logoPath']) > 0:
-        cloudinary.uploader.upload(imgList[index]['logoPath'],public_id='linktodapp'+imgList[index]['logoName'])
-    if len(imgList[index]['iconPath']) > 0:
-        cloudinary.uploader.upload(imgList[index]['iconPath'], public_id='linktodapp' + imgList[index]['iconName'])
+    print('uploadToCloud',imgList[index]['logoPath'])
+    # if len(imgList[index]['logoPath']) > 0:
+    #     cloudinary.uploader.upload(imgList[index]['logoPath'],public_id='linktodapp'+imgList[index]['logoName'])
+    # if len(imgList[index]['iconPath']) > 0:
+    #     cloudinary.uploader.upload(imgList[index]['iconPath'], public_id='linktodapp' + imgList[index]['iconName'])
 
 
 # 注册命令
@@ -232,7 +235,7 @@ def register_commands(app):
         click.echo('Initialized table dapps')
 
     @app.cli.command()
-    def dimgfromstatus():
+    def upimgfromstatus():
 
         def uploadimg(imgList):
             pool = Pool()
@@ -255,9 +258,13 @@ def register_commands(app):
         click.echo('uploadimg over')
 
     @app.cli.command()
-    def createtagging():
-        pass
-
+    def updatecdnpath():
+        # 暂时不知道用什么方法能正确的不用两层循环update
+        for idlist in Dapps.query.with_entities(Dapps.id).all():
+            for targetDapp in Dapps.query.filter(Dapps.id == idlist.id).all():
+                targetDapp.icon_url = targetDapp.icon_url.replace('https://res.cloudinary.com/','https://cdn.stateofthedapps.com/')
+                targetDapp.logo_url = targetDapp.logo_url.replace('https://res.cloudinary.com/','https://cdn.stateofthedapps.com/')
+                db.session.commit()
 
 
 
