@@ -49,7 +49,7 @@ def register_extensions(app):
 # 注册蓝本
 def register_blueprints(app):
     # app.register_blueprint(api_v1, url_prefix='/api/v1')
-    app.register_blueprint(api_v1, url_prefix='/v1', subdomain='api')  # enable subdomain support
+    app.register_blueprint(api_v1, url_prefix='/v1', subdomain='api')
 
 # 初始化dapps
 def initdapps(platform,pagenum):

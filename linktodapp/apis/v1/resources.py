@@ -7,7 +7,7 @@ class IndexAPI(MethodView):
     def get(self):
         return jsonify({
             "api_version":"1.0",
-            "api_base_url":"api.xxx.com/v1"
+            "api_base_url":"api.linktodapp.com/v1"
         })
 
 api_v1.add_url_rule('/', view_func=IndexAPI.as_view('index'), methods=['GET'])
